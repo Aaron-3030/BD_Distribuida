@@ -1,0 +1,23 @@
+$kind: http-request
+name: http://localhost:3000/movimientos
+description: ""
+url: http://localhost:3000/movimientos
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"id_producto\": 1,\r
+
+    \  \"id_usuario\": 1,\r
+
+    \  \"tipo\": \"SALIDA\",\r
+
+    \  \"cantidad\": 5,\r
+
+    \  \"motivo\": \"Venta en tienda\",\r
+
+    \  \"observacion\": \"Atendido por caja\"\r
+
+    }"
+order: 3000
