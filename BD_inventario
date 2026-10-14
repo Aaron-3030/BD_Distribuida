@@ -1,0 +1,124 @@
+DROP TABLE IF EXISTS movimientos CASCADE;
+DROP TABLE IF EXISTS productos   CASCADE;
+DROP TABLE IF EXISTS categorias  CASCADE;
+DROP TABLE IF EXISTS usuarios    CASCADE;
+
+CREATE TABLE usuarios (
+    id_usuario INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombres VARCHAR(80) NOT NULL,
+    apellidos VARCHAR(80) NOT NULL,
+    username VARCHAR(40) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) NOT NULL DEFAULT 'EMPLEADO' CHECK (rol IN ('ADMIN', 'EMPLEADO')),
+    estado BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categorias (
+    id_categoria INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre VARCHAR(60)  NOT NULL UNIQUE,
+    descripcion  VARCHAR(200),
+    estado BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE productos (
+    id_producto INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    codigo VARCHAR(30) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(250),
+    id_categoria INT NOT NULL,
+    precio_compra NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (precio_compra >= 0),
+    precio_venta NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (precio_venta  >= 0),
+    stock_actual INT NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+    stock_minimo INT NOT NULL DEFAULT 0 CHECK (stock_minimo >= 0),
+    unidad_medida VARCHAR(20) NOT NULL DEFAULT 'UNIDAD',
+    estado BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT fk_producto_categoria
+	FOREIGN KEY (id_categoria) REFERENCES categorias (id_categoria) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE movimientos (
+    id_movimiento INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_producto INT NOT NULL,
+    id_usuario INT NOT NULL,
+    tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('ENTRADA', 'SALIDA')),
+    cantidad INT NOT NULL CHECK (cantidad > 0),
+    fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    motivo VARCHAR(100), -- compra, venta, merma, ajuste...
+    observacion   VARCHAR(250),
+    CONSTRAINT fk_mov_producto
+    FOREIGN KEY (id_producto) REFERENCES productos (id_producto) ON UPDATE CASCADE ON DELETE RESTRICT,
+    CONSTRAINT fk_mov_usuario
+    FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_productos_categoria ON productos (id_categoria);
+CREATE INDEX idx_mov_producto ON movimientos (id_producto);
+CREATE INDEX idx_mov_usuario ON movimientos (id_usuario);
+CREATE INDEX idx_mov_fecha ON movimientos (fecha);
+
+-- TRIGGER
+
+CREATE OR REPLACE FUNCTION fn_actualizar_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.tipo = 'ENTRADA' THEN
+        UPDATE productos
+           SET stock_actual = stock_actual + NEW.cantidad
+         WHERE id_producto = NEW.id_producto;
+    ELSE
+        UPDATE productos
+           SET stock_actual = stock_actual - NEW.cantidad
+         WHERE id_producto = NEW.id_producto;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_actualizar_stock
+AFTER INSERT ON movimientos
+FOR EACH ROW EXECUTE FUNCTION fn_actualizar_stock();
+
+-- DATOS DE PRUEBA
+
+INSERT INTO usuarios (nombres, apellidos, username, password_hash, rol) VALUES
+('Admin', 'Principal', 'admin',  'hash_de_ejemplo_1', 'ADMIN'),
+('Juan',  'Pérez',     'jperez', 'hash_de_ejemplo_2', 'EMPLEADO');
+
+INSERT INTO categorias (nombre, descripcion) VALUES
+('Abarrotes',  'Arroz, azúcar, menestras, aceites'),
+('Bebidas',    'Gaseosas, aguas y jugos'),
+('Limpieza',   'Detergentes y artículos de aseo');
+
+INSERT INTO productos (codigo, nombre, id_categoria, precio_compra, precio_venta, stock_minimo, unidad_medida) VALUES
+('P001', 'Arroz 1 kg',        1, 3.50, 4.50, 10, 'KG'),
+('P002', 'Gaseosa 500 ml',    2, 1.80, 2.50, 20, 'UNIDAD'),
+('P003', 'Detergente 800 g',  3, 8.00, 10.50, 5, 'UNIDAD');
+
+INSERT INTO movimientos (id_producto, id_usuario, tipo, cantidad, motivo) VALUES
+(1, 1, 'ENTRADA', 50, 'Compra a proveedor'),
+(2, 1, 'ENTRADA', 60, 'Compra a proveedor'),
+(3, 1, 'ENTRADA', 15, 'Compra a proveedor'),
+(1, 2, 'SALIDA',   8, 'Venta'),
+(2, 2, 'SALIDA',  12, 'Venta');
+
+-- CONSULTAS ÚTILES
+
+-- Stock actual por producto y categoría
+SELECT p.codigo, p.nombre, c.nombre AS categoria, p.stock_actual, p.stock_minimo
+FROM productos p
+JOIN categorias c ON c.id_categoria = p.id_categoria
+ORDER BY c.nombre, p.nombre;
+
+-- Productos con stock bajo
+SELECT codigo, nombre, stock_actual, stock_minimo
+FROM productos
+WHERE stock_actual <= stock_minimo;
+
+-- Historial de movimientos
+SELECT m.id_movimiento, m.fecha, p.nombre AS producto, m.tipo, m.cantidad,
+       u.username AS usuario, m.motivo
+FROM movimientos m
+JOIN productos p ON p.id_producto = m.id_producto
+JOIN usuarios  u ON u.id_usuario  = m.id_usuario
+ORDER BY m.fecha DESC;
