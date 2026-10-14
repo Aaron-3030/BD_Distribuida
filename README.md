@@ -1,11 +1,11 @@
 # Sistema de Gestión de Inventario - Base de Datos Distribuida
 
 **Integrantes del Grupo:**
-Cardenas Garcia, Guy Aaron
-Santiago Bevilacqua, Juan Diego
-D´nilson Joseph, Pariona Pariona
-Huaman Auris, Maria Flavia
-Tataje Baiocchi, Fabrizzio
+Cardenas Garcia, Guy Aaron.
+Santiago Bevilacqua, Juan Diego.
+D´nilson Joseph, Pariona Pariona.
+Huaman Auris, Maria Flavia.
+Tataje Baiocchi, Fabrizzio.
 
 ---
 
@@ -13,7 +13,7 @@ Tataje Baiocchi, Fabrizzio
 Se diseñó el modelo relacional para el control de inventario utilizando las tablas `usuarios`, `categorias`, `productos` y `movimientos`.
 
 * **Script SQL:** Incluye llaves primarias, foráneas, restricciones de unicidad e índices para optimización.
-* Ubicación en el repositorio: `./script.sql`
+* Ubicación en el repositorio: `./BD_inventario`
 
 ---
 
@@ -31,10 +31,10 @@ Se implementó la autenticación del usuario validando credenciales contra la ba
 
 ### Evidencias en Postman:
 1. **Registro de Usuario (`POST /register`):** Encripta la contraseña antes de insertarla en la base de datos.
-   ![Registro de Usuario](http://localhost:3000/register)
+   ![register](./screenshots/register_postman.png)
 
 2. **Inicio de Sesión (`POST /login`):** Compara la contraseña ingresada en texto plano contra el `password_hash` guardado en Render.
-   ![Inicio de Sesión Exitoso](http://localhost:3000/login)
+   ![Login](./screenshots/login_postman.png)
 
 ---
 
@@ -45,15 +45,15 @@ Se programó el endpoint `POST /movimientos` para registrar entradas y salidas d
 
 ### Evidencia en Postman:
 * **Registro de Salida/Venta (`POST /movimientos`):**
-  ![Movimiento de Entrada/Salida](http://localhost:3000/movimientos)
+  ![movimientos](./screenshots/movimientos_postman.png)
 
 ---
 
 ## Instrucciones de Ejecución Local
 1. Clonar el repositorio: https://github.com/Aaron-3030/BD_Distribuida.git
 2. Instalar dependencias: 
-bash
+bash,
 npm install
 3. Iniciar el servidor: 
-bash
+bash,
 node server.js
